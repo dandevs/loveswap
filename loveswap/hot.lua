@@ -76,5 +76,4 @@ local function createHot()
   return hot
 end
 
-
 return createHot
