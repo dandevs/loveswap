@@ -56,7 +56,7 @@ local function createHot()
     if type(value) == "table" then
       -- for k, v in pairs(hot.wrapper) do hot.wrapper[k] = nil end
       for k, v in pairs(value) do
-        if true then
+        if isHotSwapFriendly(v) then
           local child = hotWeakMap[v] or hot.children[k] or createHot()
           hot.addChild(k, child)
           child.update(v)

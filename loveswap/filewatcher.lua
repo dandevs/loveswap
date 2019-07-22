@@ -11,7 +11,7 @@ local function createFilewatcher(settings)
   local internal = {
     timeLastScanned = love.timer.getTime(),
     onFileChanged   = noop,
-    scanInterval    = 0.5
+    scanInterval    = 0.25
   }
   local watcher = { files = {}, internal = internal }
 

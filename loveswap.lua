@@ -95,7 +95,6 @@ function loveswap.update()
     onInitiate()
   elseif internal.state == "error" then
     if not loveswap.getHasErrors() then -- TODO: Turn into function
-      internal.errors = {}
       internal.state = "normal"
       loveswap.revertLoveFuncsFromError()
     end
@@ -109,9 +108,6 @@ end
 
 function loveswap.updateModule(modulepath)
   local hotModule, moduleValue = internal.hots[modulepath]
-  printTable(internal.errors)
-  print(loveswap.getHasErrors())
-
   if not hotModule then
     hotModule = createHot()
     internal.hots[modulepath] = hotModule
@@ -269,7 +265,7 @@ end
 --------------------------------------------------------------------------------
 
 do
-  love.global = {
+  loveswap.global = {
     beforeModuleSwapListeners = {},
     afterModuleSwapListeners  = {}
   }
@@ -283,14 +279,14 @@ do
     end
   end
 
-  function love.global.beforeModuleSwap(callback)
+  function loveswap.global.beforeModuleSwap(callback)
     table.insert(love.global.beforeModuleSwapListeners, callback)
     return function()
       removeValue(love.global.beforeModuleSwapListeners, callback)
     end
   end
 
-  function love.global.afterModuleSwap(callback)
+  function loveswap.global.afterModuleSwap(callback)
     table.insert(love.global.afterModuleSwapListeners, callback)
     return function()
       removeValue(love.global.afterModuleSwapListeners, callback)
@@ -307,9 +303,9 @@ do
   local prevModulepath = nil
 
   local errDraw = function()
+    if internal.state ~= "error" then return end
     love.graphics.setColor(255, 255, 255)
     love.graphics.print(errToShow or "Error: check console", 80, 80)
-    love.graphics.reset()
   end
 
   function loveswap.error()
@@ -338,7 +334,6 @@ do
   end
 
   function loveswap.revertLoveFuncsFromError()
-
     prevModulepath = nil
     for name, func in pairs(internal.loveFuncsBeforeError) do
       love[name] = func
