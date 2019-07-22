@@ -1,3 +1,4 @@
+local getTime = love.timer.getTime
 local function merge(source, other)
   for k, v in pairs(other) do source[k] = v end
   return source
@@ -9,7 +10,7 @@ local function noop() end
 
 local function createFilewatcher(settings)
   local internal = {
-    timeLastScanned = love.timer.getTime(),
+    timeLastScanned = getTime(),
     onFileChanged   = noop,
     scanInterval    = 0.25
   }
@@ -53,9 +54,9 @@ local function createFilewatcher(settings)
   -------------------------------------------------------------------
 
   function watcher.update()
-    if love.timer.getTime() > internal.timeLastScanned then
+    if getTime() > internal.timeLastScanned then
       watcher.scan()
-      internal.timeLastScanned = love.timer.getTime() + internal.scanInterval
+      internal.timeLastScanned = getTime() + internal.scanInterval
     end
   end
 
