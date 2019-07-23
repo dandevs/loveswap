@@ -53,9 +53,9 @@ filewatcher.onFileChanged(function(file)
   local modulepath = string.gsub(string.sub(file.path, 1, -5), "[/]", ".")
   loveswap.updateModule(modulepath)
 
-  if modulepath == "main" then
-    internal.onUpdateMain()
-  end
+  -- if modulepath == "main" then
+  --   internal.onUpdateMain()
+  -- end
 end)
 
 ---------------------------------------------------------------------------------
@@ -143,6 +143,7 @@ function loveswap.updateModule(modulepath)
     return hotModule
   end
 
+  if modulepath == "main" then internal.wrapAndUpdateLoveFuncs() end
   internal.errors[modulepath] = nil
   hotModule.update(moduleValue)
   for name, hot in pairs(internal.hotStack) do hotModule.addChild(name, hot) end
@@ -295,7 +296,6 @@ do
 
   local errDraw = function()
     if internal.state ~= "error" then return end
-    print("drawing error", math.random())
     love.graphics.setColor(255, 255, 255)
     love.graphics.print(errToShow or "Error: check console", 80, 80)
   end
