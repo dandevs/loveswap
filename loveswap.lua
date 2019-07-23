@@ -255,6 +255,10 @@ function loveswap.unskip(name, target)
   return loveswap.hot(name, target, { skip = false })
 end
 
+function loveswap.once(name, fn)
+  return loveswap.hot(name, fn, { once = true })
+end
+
 --------------------------------------------------------------------------------
 
 -- TODO: Remove callback on file when updating

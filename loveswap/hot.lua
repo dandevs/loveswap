@@ -18,6 +18,10 @@ local function createHot(depth)
     depth       = depth or 1
   }
 
+  local internal = {
+    onceExectuted = false
+  }
+
   hotWeakMap[hot] = hot
 
   --------------------------------------------------------------------------
@@ -42,7 +46,7 @@ local function createHot(depth)
     end
 
     if not hot.wrapper then
-      if type(value) == "function" then
+      if type(value) == "function" and not hot.flags.once then
         hot.wrapper = function(...) return hot.sourceValue(...) end
 
       elseif type(value) == "table" then
@@ -50,7 +54,7 @@ local function createHot(depth)
       end
     end
 
-    if type(value) ~= type(hot.wrapper) then
+    if (type(value) ~= type(hot.wrapper)) and not hot.flags.once then
       error("wrong module wrapper type: " .. type(value) .. " ~= " .. type(hot.wrapper))
     end
 
@@ -72,6 +76,11 @@ local function createHot(depth)
           hot.wrapper[k] = v
         end
       end
+    end
+
+    if hot.flags.once and not internal.onceExectuted then
+      internal.onceExectuted = true
+      hot.wrapper = value()
     end
 
     if depth == 1 then currentHot = nil end
