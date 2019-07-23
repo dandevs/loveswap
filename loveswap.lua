@@ -22,6 +22,8 @@ local loveFuncNames = {
 
 ---------------------------------------------------------
 
+local defaultIgnorePatterns = { "lib[.]loveswap" }
+
 local internal = {
   hots        = {},
   hotStack    = {},
@@ -33,7 +35,7 @@ local internal = {
   currentHot  = nil,
   state       = "initial",
 
-  ignoreModulePatterns      = { "lib.loveswap" },
+  ignoreModulePatterns      = { unpack(defaultIgnorePatterns) },
   currentModulePath         = nil,
   errorTraceStack           = {},
   beforeSwapModuleCallbacks = {},
@@ -88,7 +90,7 @@ function loveswap.setEnabled(enabled) internal.enabled = enabled end
 function loveswap.setFileScanInterval(t) internal.filewatcher.setScanInterval(t) end
 
 function loveswap.ignoreModules(patterns)
-  loveswap.internal.ignoreModulePatterns = { unpack(internal.ignoreModulePatterns), unpack(patterns) }
+  loveswap.internal.ignoreModulePatterns = { unpack(defaultIgnorePatterns), unpack(patterns) }
 end
 
 function loveswap.getHasErrors()
