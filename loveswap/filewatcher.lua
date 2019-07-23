@@ -44,7 +44,9 @@ local function createFilewatcher(settings)
     for k, file in pairs(watcher.files) do
       local info = love.filesystem.getInfo(file.path)
 
-      if info.modtime ~= file.modtime then
+      if not info then
+        watcher.files[k] = nil
+      elseif info.modtime ~= file.modtime then
         merge(file, info) -- Update file info
         internal.onFileChanged(file)
       end
