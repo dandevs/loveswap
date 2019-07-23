@@ -1,5 +1,6 @@
 local hotWeakMap = setmetatable({}, { __mode = "kv" })
 local hotWeakMapWrapper = setmetatable({}, { __mode = "kv" })
+local currentHot
 
 function isHotSwapFriendly(value)
   if type(value) == "function" or type(value) == "table" then
@@ -8,12 +9,13 @@ function isHotSwapFriendly(value)
   return false
 end
 
-local function createHot()
+local function createHot(depth)
   local hot = {
     children    = {},
     flags       = {},
     wrapper     = nil,
     sourceValue = nil,
+    depth       = depth or 1
   }
 
   hotWeakMap[hot] = hot
@@ -39,9 +41,6 @@ local function createHot()
       return hot
     end
 
-    -- if hotWeakMap[value] then return hot.sourceValue end
-    -- if value == hot then return hot end
-
     if not hot.wrapper then
       if type(value) == "function" then
         hot.wrapper = function(...) return hot.sourceValue(...) end
@@ -64,7 +63,7 @@ local function createHot()
           if not hot.children[k] and hotWeakMapWrapper[v] then
             hot.wrapper[k] = v
           else
-            local child = hot.children[k] or createHot()
+            local child = hot.children[k] or createHot(hot.depth + 1)
             hot.addChild(k, child)
             child.update(v)
             hot.wrapper[k] = child.wrapper
@@ -75,6 +74,7 @@ local function createHot()
       end
     end
 
+    if depth == 1 then currentHot = nil end
     hot.sourceValue = value
     hotWeakMapWrapper[hot.wrapper] = hot
     return hot

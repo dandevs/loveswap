@@ -49,7 +49,6 @@ loveswap.internal = internal
 
 ---------------------------------------------------------
 
-local onUpdateMain
 filewatcher.onFileChanged(function(file)
   local modulepath = string.gsub(string.sub(file.path, 1, -5), "[/]", ".")
   loveswap.updateModule(modulepath)
@@ -62,7 +61,7 @@ end)
 ---------------------------------------------------------------------------------
 
 function internal.wrapAndUpdateLoveFuncs()
-if internal.state == "error" then return end
+  if internal.state == "error" then return end
 
   for i, name in ipairs(loveFuncNames) do
     if love[name] then
@@ -75,7 +74,9 @@ if internal.state == "error" then return end
 end
 
 function internal.onUpdateMain()
-  internal.wrapAndUpdateLoveFuncs()
+  if internal.state ~= "error" then
+    internal.wrapAndUpdateLoveFuncs()
+  end
 end
 
 local function onInitiate()
@@ -294,6 +295,7 @@ do
 
   local errDraw = function()
     if internal.state ~= "error" then return end
+    print("drawing error", math.random())
     love.graphics.setColor(255, 255, 255)
     love.graphics.print(errToShow or "Error: check console", 80, 80)
   end
