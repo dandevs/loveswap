@@ -35,6 +35,7 @@ local internal = {
 
   ignoreModulePatterns      = { "lib.loveswap" },
   currentModulePath         = nil,
+  errorTraceStack           = {},
   beforeSwapModuleCallbacks = {},
   afterSwapModuleCallbacks  = {},
   hotLoveFuncs              = {},
@@ -52,10 +53,6 @@ loveswap.internal = internal
 filewatcher.onFileChanged(function(file)
   local modulepath = string.gsub(string.sub(file.path, 1, -5), "[/]", ".")
   loveswap.updateModule(modulepath)
-
-  -- if modulepath == "main" then
-  --   internal.onUpdateMain()
-  -- end
 end)
 
 ---------------------------------------------------------------------------------
@@ -135,6 +132,7 @@ function loveswap.updateModule(modulepath)
   local ok = xpcall(function()
     moduleValue = trueRequire(modulepath)
   end, function(err)
+    internal.errorTraceStack[modulepath] = debug.traceback()
     internal.errors[modulepath] = err
   end)
 
@@ -292,12 +290,14 @@ end
 do
   internal.loveFuncsBeforeError = {}
   local errToShow = ""
+  local errModulePath = nil
   local prevModulepath = nil
 
   local errDraw = function()
     if internal.state ~= "error" then return end
     love.graphics.setColor(255, 255, 255)
     love.graphics.print(errToShow or "Error: check console", 80, 80)
+    love.graphics.print(internal.errorTraceStack[errModulePath] or "", 80, 100)
   end
 
   function loveswap.error()
@@ -318,8 +318,9 @@ do
     love.draw = errDraw
 
     for modulepath, err in pairs(internal.errors) do
+      errModulePath = modulepath
       errToShow = err
-      if prevModulepath ~= modulepath then print(err) end
+      if prevModulepath ~= modulepath then print(err) print(internal.errorTraceStack[modulepath]) end
       prevModulepath = modulepath
       break
     end
