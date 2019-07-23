@@ -4,6 +4,8 @@ local filewatcher = (require "lib.loveswap.filewatcher")()
 local createHot   = require "lib.loveswap.hot"
 local function noop() end
 
+loveswap.global = {}
+
 ---------------------------------------------------------
 
 local loveFuncNames = {
@@ -37,7 +39,15 @@ local internal = {
   afterSwapModuleCallbacks  = {},
   hotLoveFuncs              = {},
 }
+
+internal.global = {
+  beforeSwapModuleCallback = noop,
+  afterSwapModuleCallback  = noop
+}
+
 loveswap.internal = internal
+
+---------------------------------------------------------
 
 local onUpdateMain
 filewatcher.onFileChanged(function(file)
@@ -115,6 +125,7 @@ function loveswap.updateModule(modulepath)
 
   internal.currentModulePath = modulepath
   ;(internal.beforeSwapModuleCallbacks[modulepath] or noop)(modulepath);
+  internal.global.beforeSwapModuleCallback(modulepath)
 
   local loadedBackup = package.loaded[modulepath]
   package.loaded[modulepath] = nil
@@ -141,6 +152,7 @@ function loveswap.updateModule(modulepath)
   internal.currentHot = nil
   internal.currentModulePath = nil
   ;(internal.afterSwapModuleCallbacks[modulepath] or noop)(modulepath);
+  internal.global.afterSwapModuleCallback(modulepath)
 
   return hotModule
 end
@@ -264,34 +276,12 @@ end
 
 --------------------------------------------------------------------------------
 
-do
-  loveswap.global = {
-    beforeModuleSwapListeners = {},
-    afterModuleSwapListeners  = {}
-  }
+function loveswap.global.beforeModuleSwap(callback)
+  internal.global.beforeSwapModuleCallback = callback or noop
+end
 
-  local function removeValue(tbl, value)
-    for i, v in ipairs(tbl) do
-      if value == v then
-        tbl.removeValue(tbl, i)
-        break
-      end
-    end
-  end
-
-  function loveswap.global.beforeModuleSwap(callback)
-    table.insert(love.global.beforeModuleSwapListeners, callback)
-    return function()
-      removeValue(love.global.beforeModuleSwapListeners, callback)
-    end
-  end
-
-  function loveswap.global.afterModuleSwap(callback)
-    table.insert(love.global.afterModuleSwapListeners, callback)
-    return function()
-      removeValue(love.global.afterModuleSwapListeners, callback)
-    end
-  end
+function loveswap.global.afterModuleSwap(callback)
+  internal.global.afterSwapModuleCallback = callback or noop
 end
 
 --------------------------------------------------------------------------------
