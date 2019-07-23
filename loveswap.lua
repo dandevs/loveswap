@@ -33,7 +33,8 @@ local internal = {
   cache       = cache,
   filewatcher = filewatcher,
   currentHot  = nil,
-  state       = "initial",
+  state       = "normal",
+  firstRun    = true,
 
   ignoreModulePatterns      = { unpack(defaultIgnorePatterns) },
   currentModulePath         = nil,
@@ -49,6 +50,7 @@ internal.global = {
 }
 
 loveswap.internal = internal
+filewatcher.addFile("main.lua")
 
 ---------------------------------------------------------
 
@@ -59,13 +61,26 @@ end)
 
 ---------------------------------------------------------------------------------
 
-function internal.wrapAndUpdateLoveFuncs()
+function internal.wrapAndUpdateLoveFuncs() -- TODO: Love functions outside main?
   if internal.state == "error" then return end
 
+  local onError = function(err)
+    internal.errorTraceStack["main"] = debug.traceback()
+    internal.errors["main"] = err
+    loveswap.error()
+  end
+
   for i, name in ipairs(loveFuncNames) do
-    if love[name] then
+    local loveFunc = love[name]
+
+    if loveFunc then
       local hot = internal.hotLoveFuncs[name] or createHot()
-      hot.update(love[name])
+
+      if loveFunc ~= hot.wrapper then
+        print("swapped", name, loveFunc)
+        hot.update(function(...) xpcall(loveFunc, onError, ...) end)
+      end
+
       internal.hotLoveFuncs[name] = hot
       love[name] = hot.wrapper
     end
@@ -78,11 +93,6 @@ function internal.onUpdateMain()
   end
 end
 
-local function onInitiate()
-  internal.state = "normal"
-  internal.wrapAndUpdateLoveFuncs()
-  internal.filewatcher.addFile("main.lua")
-end
 
 ---------------------------------------------------------------------------------
 
@@ -101,16 +111,12 @@ end
 
 function loveswap.update()
   if not internal.enabled then return end
-  if internal.state == "initial" then
-    onInitiate()
-  elseif internal.state == "error" then
-    if not loveswap.getHasErrors() then -- TODO: Turn into function
-      internal.state = "normal"
-      loveswap.revertLoveFuncsFromError()
-    end
+
+  if internal.firstRun then
+    internal.firstRun = false
+    internal.wrapAndUpdateLoveFuncs()
   end
 
-  if loveswap.getHasErrors() then loveswap.error() end
   internal.filewatcher.update()
 end
 
@@ -136,17 +142,30 @@ function loveswap.updateModule(modulepath)
   end, function(err)
     internal.errorTraceStack[modulepath] = debug.traceback()
     internal.errors[modulepath] = err
+    loveswap.error()
   end)
 
   if not ok then
     package.loaded[modulepath] = loadedBackup
+    internal.currentHot = nil
+    internal.currentModulePath = nil
     return hotModule
   end
 
-  if modulepath == "main" then internal.wrapAndUpdateLoveFuncs() end
+
   internal.errors[modulepath] = nil
+  if not loveswap.getHasErrors() then
+    internal.state = "normal"
+    if modulepath == "main" then internal.wrapAndUpdateLoveFuncs() end
+  end
+
   hotModule.update(moduleValue)
   for name, hot in pairs(internal.hotStack) do hotModule.addChild(name, hot) end
+
+  -- if not loveswap.getHasErrors() then
+  --   internal.state = "normal"
+  --   loveswap.revertLoveFuncsFromError()
+  -- end
 
   ---------------------------------------------------------------------------
 
@@ -155,7 +174,6 @@ function loveswap.updateModule(modulepath)
   internal.currentModulePath = nil
   ;(internal.afterSwapModuleCallbacks[modulepath] or noop)(modulepath);
   internal.global.afterSwapModuleCallback(modulepath)
-
   return hotModule
 end
 
@@ -294,10 +312,20 @@ end
 
 
 do
-  internal.loveFuncsBeforeError = {}
   local errToShow = ""
   local errModulePath = nil
   local prevModulepath = nil
+
+  local function errUpdate()
+    if not loveswap.getHasErrors() then
+      internal.state = "normal"
+      loveswap.revertLoveFuncsFromError()
+    else
+      loveswap.error()
+    end
+
+    filewatcher.update()
+  end
 
   local errDraw = function()
     if internal.state ~= "error" then return end
@@ -314,13 +342,12 @@ do
 
     if internal.state ~= "error" then
       internal.state = "error"
-      internal.loveFuncsBeforeError = {}
+      prevModulepath = tostring(math.random())
 
-      for i, name in ipairs(loveFuncNames) do internal.loveFuncsBeforeError[name] = love[name] end
       for i, name in ipairs(loveFuncNames) do love[name] = noop end
     end
 
-    love.update = loveswap.update
+    love.update = errUpdate
     love.draw = errDraw
 
     for modulepath, err in pairs(internal.errors) do
@@ -333,12 +360,11 @@ do
   end
 
   function loveswap.revertLoveFuncsFromError()
-    prevModulepath = nil
-    for name, func in pairs(internal.loveFuncsBeforeError) do
-      love[name] = func
-    end
+    prevModulepath = tostring(math.random())
+    for name, hot in pairs(internal.hotLoveFuncs) do love[name] = hot.wrapper end
   end
 end
+
 --------------------------------------------------------------------------------
 
 return loveswap
