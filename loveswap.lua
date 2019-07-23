@@ -77,7 +77,6 @@ function internal.wrapAndUpdateLoveFuncs() -- TODO: Love functions outside main?
       local hot = internal.hotLoveFuncs[name] or createHot()
 
       if loveFunc ~= hot.wrapper then
-        print("swapped", name, loveFunc)
         hot.update(function(...) xpcall(loveFunc, onError, ...) end)
       end
 
@@ -161,11 +160,6 @@ function loveswap.updateModule(modulepath)
 
   hotModule.update(moduleValue)
   for name, hot in pairs(internal.hotStack) do hotModule.addChild(name, hot) end
-
-  -- if not loveswap.getHasErrors() then
-  --   internal.state = "normal"
-  --   loveswap.revertLoveFuncsFromError()
-  -- end
 
   ---------------------------------------------------------------------------
 
